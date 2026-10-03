@@ -49,7 +49,7 @@ th{color:var(--sub);font-size:.72rem;text-transform:uppercase;}
 </style>
 </head>
 <body>
-
+ 
 <div id="authScreen" class="card">
   <h1>🍛 Hostel Mess System</h1>
   <p class="sub">Login ya naya account banayein</p>
@@ -59,21 +59,29 @@ th{color:var(--sub);font-size:.72rem;text-transform:uppercase;}
   </div>
   <div id="loginPane">
     <label class="small">Email</label><input id="loginEmail" type="email">
-    <label class="small">Password</label><input id="loginPass" type="password">
+    <label class="small">Password</label>
+    <div style="position:relative;">
+      <input id="loginPass" type="password" style="padding-right:38px;">
+      <button type="button" id="loginPassToggle" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--sub);font-size:1rem;padding:4px 8px;cursor:pointer;">👁</button>
+    </div>
     <button id="loginBtn">Login</button>
     <div class="err" id="loginErr"></div>
   </div>
   <div id="signupPane" class="hidden">
     <label class="small">Pura naam</label><input id="suName" type="text">
     <label class="small">Email</label><input id="suEmail" type="email">
-    <label class="small">Password (kam az kam 6 characters)</label><input id="suPass" type="password">
+    <label class="small">Password (kam az kam 6 characters)</label>
+    <div style="position:relative;">
+      <input id="suPass" type="password" style="padding-right:38px;">
+      <button type="button" id="suPassToggle" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--sub);font-size:1rem;padding:4px 8px;cursor:pointer;">👁</button>
+    </div>
     <label class="small">Mess Number (warden ne diya hoga) — warden/worker khaali chhor sakte hain</label><input id="suMess" type="text">
     <label class="small">Staff code (sirf warden/worker ke liye, warda ne diya hoga)</label><input id="suStaff" type="text">
     <button id="signupBtn">Sign up</button>
     <div class="err" id="signupErr"></div>
   </div>
 </div>
-
+ 
 <div id="appScreen" class="hidden">
   <div class="row" style="justify-content:space-between;">
     <h1>🍛 Hostel Mess System</h1>
@@ -88,7 +96,7 @@ th{color:var(--sub);font-size:.72rem;text-transform:uppercase;}
   <div class="pane" id="pane-billing"></div>
   <div class="pane" id="pane-mybill"></div>
 </div>
-
+ 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -104,7 +112,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-
+ 
 const STAFF_CODE_WORKER = "mess-worker-2026";
 const STAFF_CODE_WARDEN = "mess-warden-2026";
 const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
@@ -113,19 +121,19 @@ const MEAL_LABEL = {breakfast:"Breakfast", lunch:"Lunch", dinner:"Dinner"};
 const DEFAULT_MENU = {};
 DAYS.forEach(d=>{ DEFAULT_MENU[d]={breakfast:{time:"7:30–9:00 AM",items:"Not set yet"},lunch:{time:"12:30–2:00 PM",items:"Not set yet"},dinner:{time:"8:00–9:30 PM",items:"Not set yet"}};});
 const DEFAULT_SETTINGS = {meals:{breakfast:{time:"07:30",cutoffHours:3},lunch:{time:"12:30",cutoffHours:3},dinner:{time:"20:00",cutoffHours:2}},rate:60};
-
+ 
 let me = null; // {uid, name, email, role, messNumber}
 let menu = JSON.parse(JSON.stringify(DEFAULT_MENU));
 let settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
 let rosterCache = []; // [{messNumber,name,uid,status}]
 let attendCache = {};
 let selDate = todayStr(0), kitchenDate = todayStr(0);
-
+ 
 function todayStr(off){const d=new Date();d.setDate(d.getDate()+off);return d.toISOString().slice(0,10);}
 function fmtDate(s){return new Date(s+'T00:00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});}
 function esc(s){return (s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function nameFor(mess){const r=rosterCache.find(x=>x.messNumber===mess); return r? r.name : mess;}
-
+ 
 // ---------------- AUTH UI ----------------
 document.querySelectorAll('[data-atab]').forEach(t=>{
   t.onclick=()=>{
@@ -135,7 +143,18 @@ document.querySelectorAll('[data-atab]').forEach(t=>{
     document.getElementById('signupPane').classList.toggle('hidden', t.dataset.atab!=='signup');
   };
 });
-
+ 
+function wirePassToggle(inputId, btnId){
+  const inp=document.getElementById(inputId), btn=document.getElementById(btnId);
+  btn.onclick = ()=>{
+    const show = inp.type==='password';
+    inp.type = show ? 'text' : 'password';
+    btn.textContent = show ? '🙈' : '👁';
+  };
+}
+wirePassToggle('loginPass','loginPassToggle');
+wirePassToggle('suPass','suPassToggle');
+ 
 document.getElementById('loginBtn').onclick = async ()=>{
   const email=document.getElementById('loginEmail').value.trim();
   const pass=document.getElementById('loginPass').value;
@@ -143,7 +162,7 @@ document.getElementById('loginBtn').onclick = async ()=>{
   try{ await auth.signInWithEmailAndPassword(email,pass); }
   catch(e){ errEl.textContent = e.message; }
 };
-
+ 
 document.getElementById('signupBtn').onclick = async ()=>{
   const name=document.getElementById('suName').value.trim();
   const email=document.getElementById('suEmail').value.trim();
@@ -152,8 +171,9 @@ document.getElementById('signupBtn').onclick = async ()=>{
   const staffCode=document.getElementById('suStaff').value.trim();
   const errEl=document.getElementById('signupErr'); errEl.textContent='';
   if(!name||!email||pass.length<6){ errEl.textContent='Naam, email aur kam az kam 6-character password zaroori hai.'; return; }
-
+ 
   let role='student', assignedMess=null;
+  try{
   if(staffCode===STAFF_CODE_WARDEN) role='warden';
   else if(staffCode===STAFF_CODE_WORKER) role='worker';
   else{
@@ -163,7 +183,6 @@ document.getElementById('signupBtn').onclick = async ()=>{
     if(rdoc.data().uid){ errEl.textContent='Ye Mess Number pehle se kisi account se linked hai.'; return; }
     assignedMess = messNo; role='student';
   }
-  try{
     const cred = await auth.createUserWithEmailAndPassword(email, pass);
     const uid = cred.user.uid;
     const userDoc = {name, email, role, messNumber: assignedMess, createdAt: Date.now()};
@@ -171,9 +190,9 @@ document.getElementById('signupBtn').onclick = async ()=>{
     if(assignedMess){ await db.collection('roster').doc(assignedMess).update({uid, status:'claimed', name}); }
   }catch(e){ errEl.textContent = e.message; }
 };
-
+ 
 document.getElementById('logoutBtn').onclick = ()=> auth.signOut();
-
+ 
 // ---------------- AUTH STATE ----------------
 auth.onAuthStateChanged(async (user)=>{
   if(!user){
@@ -193,7 +212,7 @@ auth.onAuthStateChanged(async (user)=>{
   subscribeShared();
   showTab(me.role==='student' ? 'attendance' : 'kitchen');
 });
-
+ 
 function buildTabs(){
   const tabs = [];
   tabs.push({id:'menu', label:'Menu'});
@@ -219,7 +238,7 @@ function showTab(id){
   if(id==='billing') renderBilling();
   if(id==='mybill') renderMyBill();
 }
-
+ 
 async function loadShared(){
   try{ const d=await db.collection('settings').doc('menu').get(); if(d.exists) menu=d.data(); else await db.collection('settings').doc('menu').set(menu); }catch(e){}
   try{ const d=await db.collection('settings').doc('general').get(); if(d.exists) settings=d.data(); else await db.collection('settings').doc('general').set(settings); }catch(e){}
@@ -236,7 +255,7 @@ function subscribeShared(){
     if(active==='kitchen') renderKitchen();
   });
 }
-
+ 
 // ---------------- MENU ----------------
 function renderMenu(){
   const canEdit = me.role==='warden';
@@ -256,7 +275,7 @@ function renderMenu(){
     };
   }
 }
-
+ 
 // ---------------- ATTENDANCE (student pre-commit) ----------------
 function deadlinePassed(dateStr, meal){
   const cfg=settings.meals[meal]; if(!cfg) return false;
@@ -270,7 +289,7 @@ async function loadAttendDoc(dateStr){
   }catch(e){ attendCache[dateStr]={date:dateStr, breakfast:{pre:{},served:{},replacements:{}}, lunch:{pre:{},served:{},replacements:{}}, dinner:{pre:{},served:{},replacements:{}}}; }
 }
 function emptyMeal(){ return {pre:{},served:{},replacements:{}}; }
-
+ 
 function renderAttendance(){
   const pane=document.getElementById('pane-attendance');
   const dates=[todayStr(0),todayStr(1)];
@@ -309,7 +328,7 @@ function drawAttendMeals(){
     };
   });
 }
-
+ 
 // ---------------- KITCHEN VIEW (worker/warden) ----------------
 function renderKitchen(){
   const pane=document.getElementById('pane-kitchen');
@@ -387,7 +406,7 @@ function openWalkinModal(meal, walkMess){
     drawKitchen();
   })();
 }
-
+ 
 // ---------------- ROSTER ----------------
 function renderRoster(){
   const canEdit = me.role==='warden';
@@ -413,7 +432,7 @@ function renderRoster(){
     });
   }
 }
-
+ 
 // ---------------- BILLING (warden) ----------------
 function computeBilledForMeal(mealObj){
   const preYes = Object.keys(mealObj.pre||{}).filter(k=>mealObj.pre[k]===true);
@@ -486,7 +505,7 @@ async function generateBillUI(){
   });
   st.textContent = `Showing ${month}.`;
 }
-
+ 
 // ---------------- MY BILL (student) ----------------
 async function renderMyBill(){
   const pane=document.getElementById('pane-mybill');
@@ -510,3 +529,4 @@ async function renderMyBill(){
 </script>
 </body>
 </html>
+ 
