@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hostel Mess System</title>
+<style>
+:root{--bg:#faf8f5;--card:#fff;--ink:#2b2620;--sub:#7a7267;--line:#e8e2d8;--accent:#b5652f;--accent2:#7a8f5c;--bad:#b0413e;--ok:#4a7a3c;}
+@media (prefers-color-scheme: dark){:root{--bg:#1c1a17;--card:#26231f;--ink:#f0ebe3;--sub:#a89e8f;--line:#3a352d;}}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:16px 14px 50px;max-width:780px;margin:0 auto;}
+h1{font-size:1.25rem;margin:4px 0 2px;}
+.sub{color:var(--sub);font-size:.8rem;margin-bottom:14px;}
+.hidden{display:none !important;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;}
+input,select,textarea{font-family:inherit;font-size:.86rem;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:100%;margin-bottom:8px;}
+label.small{font-size:.7rem;color:var(--sub);display:block;margin-bottom:2px;}
+button{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:.85rem;cursor:pointer;font-weight:600;}
+button.secondary{background:transparent;color:var(--accent);border:1px solid var(--accent);}
+button.ghost{background:transparent;color:var(--bad);border:1px solid var(--bad);padding:4px 10px;font-size:.75rem;}
+button:disabled{opacity:.5;cursor:not-allowed;}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--line);overflow-x:auto;}
+.tab{padding:8px 10px;cursor:pointer;font-size:.8rem;color:var(--sub);border-bottom:2px solid transparent;white-space:nowrap;}
+.tab.active{color:var(--accent);border-color:var(--accent);font-weight:600;}
+.pane{display:none;} .pane.active{display:block;}
+.status{font-size:.78rem;color:var(--sub);}
+.err{color:var(--bad);font-size:.8rem;margin:4px 0;}
+.badge{display:inline-block;font-size:.68rem;padding:2px 8px;border-radius:999px;background:var(--accent2);color:#fff;}
+.badge.bad{background:var(--bad);}
+.day-name{font-weight:700;margin-bottom:8px;color:var(--accent);}
+.meal{display:flex;gap:10px;padding:6px 0;border-top:1px dashed var(--line);}
+.meal:first-of-type{border-top:none;}
+.meal-label{width:76px;flex-shrink:0;font-size:.74rem;color:var(--sub);text-transform:uppercase;padding-top:2px;}
+.count{font-size:1.4rem;font-weight:700;color:var(--accent);}
+.listline{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px dashed var(--line);font-size:.85rem;}
+.listline:first-of-type{border-top:none;}
+table{width:100%;border-collapse:collapse;font-size:.84rem;}
+th,td{text-align:left;padding:5px 4px;border-bottom:1px solid var(--line);}
+th{color:var(--sub);font-size:.72rem;text-transform:uppercase;}
+.total-row td{font-weight:700;border-top:2px solid var(--line);}
+.attend-choice{display:flex;gap:8px;margin-top:4px;}
+.attend-choice button{flex:1;background:transparent;border:1px solid var(--line);color:var(--ink);font-weight:500;}
+.attend-choice button.sel.eat{background:var(--ok);color:#fff;border-color:var(--ok);}
+.attend-choice button.sel.skip{background:var(--bad);color:#fff;border-color:var(--bad);}
+.date-toggle{display:flex;gap:6px;margin-bottom:12px;}
+.date-toggle button{flex:1;background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:500;}
+.date-toggle button.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+</style>
+</head>
+<body>
+
+<div id="authScreen" class="card">
+  <h1>🍛 Hostel Mess System</h1>
+  <p class="sub">Login ya naya account banayein</p>
+  <div class="tabs">
+    <div class="tab active" data-atab="login">Login</div>
+    <div class="tab" data-atab="signup">Sign up</div>
+  </div>
+  <div id="loginPane">
+    <label class="small">Email</label><input id="loginEmail" type="email">
+    <label class="small">Password</label><input id="loginPass" type="password">
+    <button id="loginBtn">Login</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+  <div id="signupPane" class="hidden">
+    <label class="small">Pura naam</label><input id="suName" type="text">
+    <label class="small">Email</label><input id="suEmail" type="email">
+    <label class="small">Password (kam az kam 6 characters)</label><input id="suPass" type="password">
+    <label class="small">Mess Number (warden ne diya hoga) — warden/worker khaali chhor sakte hain</label><input id="suMess" type="text">
+    <label class="small">Staff code (sirf warden/worker ke liye, warda ne diya hoga)</label><input id="suStaff" type="text">
+    <button id="signupBtn">Sign up</button>
+    <div class="err" id="signupErr"></div>
+  </div>
+</div>
+
+<div id="appScreen" class="hidden">
+  <div class="row" style="justify-content:space-between;">
+    <h1>🍛 Hostel Mess System</h1>
+    <button class="secondary" id="logoutBtn">Logout</button>
+  </div>
+  <div class="sub" id="whoami"></div>
+  <div class="tabs" id="tabBar"></div>
+  <div class="pane active" id="pane-menu"></div>
+  <div class="pane" id="pane-attendance"></div>
+  <div class="pane" id="pane-kitchen"></div>
+  <div class="pane" id="pane-roster"></div>
+  <div class="pane" id="pane-billing"></div>
+  <div class="pane" id="pane-mybill"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDOT2RbNTODBm3h7v7h3kZuyd16WaCNW3U",
+  authDomain: "mess-system-e3f6b.firebaseapp.com",
+  projectId: "mess-system-e3f6b",
+  storageBucket: "mess-system-e3f6b.firebasestorage.app",
+  messagingSenderId: "127742851764",
+  appId: "1:127742851764:web:65ea3fda1bebca416ff5e1"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const STAFF_CODE_WORKER = "mess-worker-2026";
+const STAFF_CODE_WARDEN = "mess-warden-2026";
+const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const MEALS = ["breakfast","lunch","dinner"];
+const MEAL_LABEL = {breakfast:"Breakfast", lunch:"Lunch", dinner:"Dinner"};
+const DEFAULT_MENU = {};
+DAYS.forEach(d=>{ DEFAULT_MENU[d]={breakfast:{time:"7:30–9:00 AM",items:"Not set yet"},lunch:{time:"12:30–2:00 PM",items:"Not set yet"},dinner:{time:"8:00–9:30 PM",items:"Not set yet"}};});
+const DEFAULT_SETTINGS = {meals:{breakfast:{time:"07:30",cutoffHours:3},lunch:{time:"12:30",cutoffHours:3},dinner:{time:"20:00",cutoffHours:2}},rate:60};
+
+let me = null; // {uid, name, email, role, messNumber}
+let menu = JSON.parse(JSON.stringify(DEFAULT_MENU));
+let settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+let rosterCache = []; // [{messNumber,name,uid,status}]
+let attendCache = {};
+let selDate = todayStr(0), kitchenDate = todayStr(0);
+
+function todayStr(off){const d=new Date();d.setDate(d.getDate()+off);return d.toISOString().slice(0,10);}
+function fmtDate(s){return new Date(s+'T00:00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});}
+function esc(s){return (s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function nameFor(mess){const r=rosterCache.find(x=>x.messNumber===mess); return r? r.name : mess;}
+
+// ---------------- AUTH UI ----------------
+document.querySelectorAll('[data-atab]').forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll('[data-atab]').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('loginPane').classList.toggle('hidden', t.dataset.atab!=='login');
+    document.getElementById('signupPane').classList.toggle('hidden', t.dataset.atab!=='signup');
+  };
+});
+
+document.getElementById('loginBtn').onclick = async ()=>{
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const errEl=document.getElementById('loginErr'); errEl.textContent='';
+  try{ await auth.signInWithEmailAndPassword(email,pass); }
+  catch(e){ errEl.textContent = e.message; }
+};
+
+document.getElementById('signupBtn').onclick = async ()=>{
+  const name=document.getElementById('suName').value.trim();
+  const email=document.getElementById('suEmail').value.trim();
+  const pass=document.getElementById('suPass').value;
+  const messNo=document.getElementById('suMess').value.trim();
+  const staffCode=document.getElementById('suStaff').value.trim();
+  const errEl=document.getElementById('signupErr'); errEl.textContent='';
+  if(!name||!email||pass.length<6){ errEl.textContent='Naam, email aur kam az kam 6-character password zaroori hai.'; return; }
+
+  let role='student', assignedMess=null;
+  if(staffCode===STAFF_CODE_WARDEN) role='warden';
+  else if(staffCode===STAFF_CODE_WORKER) role='worker';
+  else{
+    if(!messNo){ errEl.textContent='Student ke liye Mess Number zaroori hai (warden se poochein).'; return; }
+    const rdoc = await db.collection('roster').doc(messNo).get();
+    if(!rdoc.exists){ errEl.textContent='Ye Mess Number roster mein nahi mila. Warden se confirm karein.'; return; }
+    if(rdoc.data().uid){ errEl.textContent='Ye Mess Number pehle se kisi account se linked hai.'; return; }
+    assignedMess = messNo; role='student';
+  }
+  try{
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    const uid = cred.user.uid;
+    const userDoc = {name, email, role, messNumber: assignedMess, createdAt: Date.now()};
+    await db.collection('users').doc(uid).set(userDoc);
+    if(assignedMess){ await db.collection('roster').doc(assignedMess).update({uid, status:'claimed', name}); }
+  }catch(e){ errEl.textContent = e.message; }
+};
+
+document.getElementById('logoutBtn').onclick = ()=> auth.signOut();
+
+// ---------------- AUTH STATE ----------------
+auth.onAuthStateChanged(async (user)=>{
+  if(!user){
+    me=null;
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('appScreen').classList.add('hidden');
+    return;
+  }
+  const udoc = await db.collection('users').doc(user.uid).get();
+  if(!udoc.exists){ await auth.signOut(); return; }
+  me = {uid:user.uid, ...udoc.data()};
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('appScreen').classList.remove('hidden');
+  document.getElementById('whoami').textContent = `${me.name} • ${me.role}${me.messNumber? ' • Mess #'+me.messNumber:''}`;
+  buildTabs();
+  await loadShared();
+  subscribeShared();
+  showTab(me.role==='student' ? 'attendance' : 'kitchen');
+});
+
+function buildTabs(){
+  const tabs = [];
+  tabs.push({id:'menu', label:'Menu'});
+  if(me.role==='student'){ tabs.push({id:'attendance', label:'Attendance'}); tabs.push({id:'mybill', label:'My Bill'}); }
+  if(me.role==='worker' || me.role==='warden'){ tabs.push({id:'kitchen', label:'Kitchen View'}); tabs.push({id:'roster', label:'Roster'}); }
+  if(me.role==='warden'){ tabs.push({id:'billing', label:'Billing'}); }
+  const bar = document.getElementById('tabBar');
+  bar.innerHTML = tabs.map((t,i)=>`<div class="tab${i===0?' active':''}" data-tab="${t.id}">${t.label}</div>`).join('');
+  bar.querySelectorAll('.tab').forEach(el=>{
+    el.onclick=()=>showTab(el.dataset.tab);
+  });
+}
+function showTab(id){
+  document.querySelectorAll('#tabBar .tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===id));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  const pane = document.getElementById('pane-'+id);
+  if(!pane) return;
+  pane.classList.add('active');
+  if(id==='menu') renderMenu();
+  if(id==='attendance') renderAttendance();
+  if(id==='kitchen') renderKitchen();
+  if(id==='roster') renderRoster();
+  if(id==='billing') renderBilling();
+  if(id==='mybill') renderMyBill();
+}
+
+async function loadShared(){
+  try{ const d=await db.collection('settings').doc('menu').get(); if(d.exists) menu=d.data(); else await db.collection('settings').doc('menu').set(menu); }catch(e){}
+  try{ const d=await db.collection('settings').doc('general').get(); if(d.exists) settings=d.data(); else await db.collection('settings').doc('general').set(settings); }catch(e){}
+  try{ const snap=await db.collection('roster').get(); rosterCache=snap.docs.map(d=>({messNumber:d.id, ...d.data()})); }catch(e){}
+}
+function subscribeShared(){
+  db.collection('settings').doc('menu').onSnapshot(d=>{ if(d.exists){ menu=d.data(); if(document.getElementById('pane-menu').classList.contains('active')) renderMenu(); }});
+  db.collection('settings').doc('general').onSnapshot(d=>{ if(d.exists) settings=d.data(); });
+  db.collection('roster').onSnapshot(snap=>{
+    rosterCache = snap.docs.map(d=>({messNumber:d.id, ...d.data()}));
+    const active = document.querySelector('#tabBar .tab.active')?.dataset.tab;
+    if(active==='roster') renderRoster();
+    if(active==='attendance') renderAttendance();
+    if(active==='kitchen') renderKitchen();
+  });
+}
+
+// ---------------- MENU ----------------
+function renderMenu(){
+  const canEdit = me.role==='warden';
+  document.getElementById('pane-menu').innerHTML = DAYS.map(day=>{
+    const d=menu[day]||DEFAULT_MENU[day];
+    return `<div class="card"><div class="day-name">${day}</div>${MEALS.map(m=>`
+      <div class="meal"><div class="meal-label">${m}</div><div>
+      <div class="status">${esc(d[m]?.time||'')}</div><div>${esc(d[m]?.items||'—')}</div></div></div>`).join('')}</div>`;
+  }).join('') + (canEdit ? `<div class="card"><label class="small">Edit menu (JSON)</label>
+    <textarea id="menuRaw" style="min-height:140px;">${esc(JSON.stringify(menu,null,1))}</textarea>
+    <button id="saveMenuBtn">Save Menu</button> <span class="status" id="menuStatus"></span></div>` : '');
+  if(canEdit){
+    document.getElementById('saveMenuBtn').onclick = async ()=>{
+      const st=document.getElementById('menuStatus');
+      try{ menu=JSON.parse(document.getElementById('menuRaw').value); await db.collection('settings').doc('menu').set(menu); st.textContent='Saved ✓'; }
+      catch(e){ st.textContent='Invalid JSON: '+e.message; }
+    };
+  }
+}
+
+// ---------------- ATTENDANCE (student pre-commit) ----------------
+function deadlinePassed(dateStr, meal){
+  const cfg=settings.meals[meal]; if(!cfg) return false;
+  const [h,m]=cfg.time.split(':').map(Number);
+  const mealDt=new Date(dateStr+'T00:00:00'); mealDt.setHours(h,m,0,0);
+  return new Date() > new Date(mealDt.getTime() - (cfg.cutoffHours||0)*3600000);
+}
+async function loadAttendDoc(dateStr){
+  try{ const d=await db.collection('attendance').doc(dateStr).get();
+    attendCache[dateStr] = d.exists ? d.data() : {date:dateStr, breakfast:{pre:{},served:{},replacements:{}}, lunch:{pre:{},served:{},replacements:{}}, dinner:{pre:{},served:{},replacements:{}}};
+  }catch(e){ attendCache[dateStr]={date:dateStr, breakfast:{pre:{},served:{},replacements:{}}, lunch:{pre:{},served:{},replacements:{}}, dinner:{pre:{},served:{},replacements:{}}}; }
+}
+function emptyMeal(){ return {pre:{},served:{},replacements:{}}; }
+
+function renderAttendance(){
+  const pane=document.getElementById('pane-attendance');
+  const dates=[todayStr(0),todayStr(1)];
+  pane.innerHTML = `<div class="date-toggle">${dates.map(d=>`<button data-d="${d}" class="${d===selDate?'active':''}">${fmtDate(d)}</button>`).join('')}</div><div id="attendMeals"></div>`;
+  pane.querySelectorAll('.date-toggle button').forEach(b=>{ b.onclick=async ()=>{ selDate=b.dataset.d; renderAttendance(); }; });
+  (async ()=>{ await loadAttendDoc(selDate); drawAttendMeals(); })();
+}
+function drawAttendMeals(){
+  const holder=document.getElementById('attendMeals'); if(!holder) return;
+  const doc=attendCache[selDate]||{};
+  const mess=me.messNumber;
+  holder.innerHTML = MEALS.map(m=>{
+    const meal=doc[m]||emptyMeal();
+    const locked=deadlinePassed(selDate,m);
+    const mine=meal.pre[mess];
+    return `<div class="card"><div class="row" style="justify-content:space-between;">
+      <strong>${MEAL_LABEL[m]}</strong>
+      <span class="badge ${locked?'bad':''}">${locked?'Closed':'Open'} · cutoff ${settings.meals[m].cutoffHours}h pehle (${settings.meals[m].time})</span></div>
+      <div class="attend-choice">
+        <button data-m="${m}" data-v="1" class="${mine===true?'sel eat':''}" ${locked?'disabled':''}>Lunga</button>
+        <button data-m="${m}" data-v="0" class="${mine===false?'sel skip':''}" ${locked?'disabled':''}>Nahi lunga</button>
+      </div></div>`;
+  }).join('') + `<div class="status" id="attendStatus"></div>`;
+  holder.querySelectorAll('.attend-choice button').forEach(b=>{
+    b.onclick=async ()=>{
+      const meal=b.dataset.m, val=b.dataset.v==='1';
+      const st=document.getElementById('attendStatus'); st.textContent='Saving…';
+      try{
+        const cur=attendCache[selDate]||{date:selDate};
+        if(!cur[meal]) cur[meal]=emptyMeal();
+        cur[meal].pre[me.messNumber]=val;
+        attendCache[selDate]=cur;
+        await db.collection('attendance').doc(selDate).set(cur, {merge:true});
+        st.textContent='Saved ✓'; drawAttendMeals();
+      }catch(e){ st.textContent='Failed: '+e.message; }
+    };
+  });
+}
+
+// ---------------- KITCHEN VIEW (worker/warden) ----------------
+function renderKitchen(){
+  const pane=document.getElementById('pane-kitchen');
+  const dates=[todayStr(0),todayStr(1)];
+  pane.innerHTML=`<div class="date-toggle">${dates.map(d=>`<button data-d="${d}" class="${d===kitchenDate?'active':''}">${fmtDate(d)}</button>`).join('')}</div><div id="kitchenMeals"></div>`;
+  pane.querySelectorAll('.date-toggle button').forEach(b=>{ b.onclick=async ()=>{ kitchenDate=b.dataset.d; renderKitchen(); }; });
+  (async ()=>{ await loadAttendDoc(kitchenDate); drawKitchen(); })();
+}
+function drawKitchen(){
+  const holder=document.getElementById('kitchenMeals'); if(!holder) return;
+  const doc=attendCache[kitchenDate]||{};
+  holder.innerHTML = MEALS.map(m=>{
+    const meal=doc[m]||emptyMeal();
+    const preYes = Object.keys(meal.pre).filter(k=>meal.pre[k]===true);
+    const served = Object.keys(meal.served).filter(k=>meal.served[k]===true);
+    const noShows = preYes.filter(k=>!served.includes(k) && !meal.replacements[k]);
+    const replacedShows = preYes.filter(k=>meal.replacements[k]);
+    const walkins = served.filter(k=>!preYes.includes(k));
+    return `<div class="card">
+      <div class="row" style="justify-content:space-between;"><strong>${MEAL_LABEL[m]}</strong><span class="count">${served.length}</span></div>
+      <p class="status">Committed: ${preYes.length} • Served: ${served.length} • No-show: ${noShows.length}</p>
+      <div style="margin-top:8px;">
+      ${preYes.map(mess=>{
+        const isServed = served.includes(mess);
+        const repl = meal.replacements[mess];
+        return `<div class="listline"><span>${esc(nameFor(mess))} <span class="status">#${esc(mess)}</span>${repl?` <span class="status">(replaced by ${esc(nameFor(repl))})</span>`:''}</span>
+          <button data-meal="${m}" data-mess="${mess}" class="mark-served ${isServed?'secondary':''}" ${repl?'disabled':''}>${isServed?'✓ Served':'Mark served'}</button></div>`;
+      }).join('')}
+      ${walkins.map(mess=>`<div class="listline"><span>${esc(nameFor(mess))} <span class="status">#${esc(mess)} (walk-in)</span></span><span class="badge">Served</span></div>`).join('')}
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <input placeholder="Walk-in: naam ya mess# search" data-walkin-search="${m}" style="flex:1;">
+      </div>
+      <div id="walkinResults-${m}"></div>
+    </div>`;
+  }).join('');
+  holder.querySelectorAll('.mark-served').forEach(b=>{
+    b.onclick=async ()=>{
+      const meal=b.dataset.meal, mess=b.dataset.mess;
+      const cur=attendCache[kitchenDate]; if(!cur[meal]) cur[meal]=emptyMeal();
+      cur[meal].served[mess]=true;
+      await db.collection('attendance').doc(kitchenDate).set(cur,{merge:true});
+      drawKitchen();
+    };
+  });
+  holder.querySelectorAll('[data-walkin-search]').forEach(inp=>{
+    inp.oninput=()=>{
+      const m=inp.dataset.walkinSearch, q=inp.value.trim().toLowerCase();
+      const resultsEl=document.getElementById('walkinResults-'+m);
+      if(!q){ resultsEl.innerHTML=''; return; }
+      const matches = rosterCache.filter(r=> r.uid && (r.name.toLowerCase().includes(q) || r.messNumber.toLowerCase().includes(q))).slice(0,6);
+      resultsEl.innerHTML = matches.map(r=>`<div class="listline"><span>${esc(r.name)} <span class="status">#${esc(r.messNumber)}</span></span><button data-addwalkin="${r.messNumber}" data-meal="${m}">Add</button></div>`).join('') || '<div class="status">Koi match nahi.</div>';
+      resultsEl.querySelectorAll('[data-addwalkin]').forEach(btn=>{
+        btn.onclick=()=>openWalkinModal(btn.dataset.meal, btn.dataset.addwalkin);
+      });
+    };
+  });
+}
+function openWalkinModal(meal, walkMess){
+  const cur=attendCache[kitchenDate]; const mealObj = cur[meal]||emptyMeal();
+  const preYes = Object.keys(mealObj.pre).filter(k=>mealObj.pre[k]===true);
+  const served = Object.keys(mealObj.served).filter(k=>mealObj.served[k]===true);
+  const noShows = preYes.filter(k=>!served.includes(k) && !mealObj.replacements[k]);
+  let replaceWho = '';
+  if(noShows.length){
+    replaceWho = prompt(`${esc(nameFor(walkMess))} ko kis ka portion milega?\n\nOptions:\n${noShows.map((n,i)=>`${i+1}. ${nameFor(n)} (#${n})`).join('\n')}\n0. Koi nahi — extra portion\n\nNumber likhein:`);
+  }
+  (async ()=>{
+    if(!cur[meal]) cur[meal]=emptyMeal();
+    cur[meal].served[walkMess]=true;
+    if(replaceWho && noShows[Number(replaceWho)-1]){
+      cur[meal].replacements[noShows[Number(replaceWho)-1]] = walkMess;
+    }
+    await db.collection('attendance').doc(kitchenDate).set(cur,{merge:true});
+    drawKitchen();
+  })();
+}
+
+// ---------------- ROSTER ----------------
+function renderRoster(){
+  const canEdit = me.role==='warden';
+  const pane=document.getElementById('pane-roster');
+  pane.innerHTML = `<div class="card"><p class="status">Total: ${rosterCache.length} (${rosterCache.filter(r=>r.uid).length} signed up)</p>
+    ${canEdit? `<div class="row"><input id="newMess" placeholder="Naya mess number" style="flex:1;"><input id="newName" placeholder="Student naam" style="flex:2;"><button id="addRoster">Add</button></div>`:''}
+    </div><div class="card" id="rosterList"></div>`;
+  document.getElementById('rosterList').innerHTML = rosterCache.map(r=>`
+    <div class="listline"><span>#${esc(r.messNumber)} — ${esc(r.name)} ${r.uid?'<span class="badge">Signed up</span>':'<span class="status">(pending signup)</span>'}</span>
+    ${canEdit && !r.uid?`<button class="ghost" data-del="${esc(r.messNumber)}">Remove</button>`:''}</div>`).join('') || '<p class="status">Koi entry nahi.</p>';
+  if(canEdit){
+    document.getElementById('addRoster').onclick = async ()=>{
+      const mess=document.getElementById('newMess').value.trim();
+      const name=document.getElementById('newName').value.trim();
+      if(!mess||!name) return;
+      const existing = await db.collection('roster').doc(mess).get();
+      if(existing.exists){ alert('Ye mess number pehle se hai.'); return; }
+      await db.collection('roster').doc(mess).set({name, uid:null, status:'unclaimed'});
+      document.getElementById('newMess').value=''; document.getElementById('newName').value='';
+    };
+    document.querySelectorAll('[data-del]').forEach(b=>{
+      b.onclick=async ()=>{ await db.collection('roster').doc(b.dataset.del).delete(); };
+    });
+  }
+}
+
+// ---------------- BILLING (warden) ----------------
+function computeBilledForMeal(mealObj){
+  const preYes = Object.keys(mealObj.pre||{}).filter(k=>mealObj.pre[k]===true);
+  const served = Object.keys(mealObj.served||{}).filter(k=>mealObj.served[k]===true);
+  const replacements = mealObj.replacements||{};
+  const billed = new Set(served); // everyone physically served pays
+  preYes.forEach(mess=>{ if(!served.includes(mess) && !replacements[mess]) billed.add(mess); });
+  return billed;
+}
+async function computeMonthlyTally(month){
+  const [y,mo]=month.split('-').map(Number);
+  const start=month+'-01';
+  const endDate=new Date(y,mo,0);
+  const end=month+'-'+String(endDate.getDate()).padStart(2,'0');
+  let docs=[];
+  try{
+    const snap = await db.collection('attendance').where('date','>=',start).where('date','<=',end).get();
+    docs = snap.docs.map(d=>d.data());
+  }catch(e){ docs = Object.values(attendCache).filter(d=>d.date>=start && d.date<=end); }
+  const tally={};
+  rosterCache.forEach(r=>{ tally[r.messNumber]=0; });
+  docs.forEach(doc=>{
+    MEALS.forEach(m=>{
+      const mealObj=doc[m]; if(!mealObj) return;
+      const billed = computeBilledForMeal(mealObj);
+      billed.forEach(mess=>{ tally[mess]=(tally[mess]||0)+1; });
+    });
+  });
+  return tally;
+}
+function renderBilling(){
+  const pane=document.getElementById('pane-billing');
+  const defMonth=new Date().toISOString().slice(0,7);
+  pane.innerHTML = `<div class="card"><div class="row">
+      <div><label class="small">Month</label><input type="month" id="billMonth" value="${defMonth}"></div>
+      <div><label class="small">Rate/meal (Rs)</label><input type="number" id="rateInput" value="${settings.rate}" style="max-width:110px;"></div>
+      <button id="saveRate" class="secondary" style="align-self:flex-end;">Save rate</button>
+      <button id="genBill" style="align-self:flex-end;">Generate</button>
+    </div><p class="status" id="billStatus"></p></div><div id="billResult"></div>`;
+  document.getElementById('saveRate').onclick = async ()=>{ settings.rate=Number(document.getElementById('rateInput').value)||0; await db.collection('settings').doc('general').set(settings,{merge:true}); document.getElementById('billStatus').textContent='Rate saved ✓'; };
+  document.getElementById('genBill').onclick = generateBillUI;
+}
+async function generateBillUI(){
+  const month=document.getElementById('billMonth').value;
+  const rate=Number(document.getElementById('rateInput').value)||settings.rate;
+  const st=document.getElementById('billStatus'); st.textContent='Calculating…';
+  const tally = await computeMonthlyTally(month);
+  const payDoc = await db.collection('payments').doc(month).get();
+  const paid = payDoc.exists ? payDoc.data() : {};
+  const rows = rosterCache.map(r=>{
+    const meals=tally[r.messNumber]||0, amount=meals*rate, paidAmt=paid[r.messNumber]||0;
+    return {mess:r.messNumber, name:r.name, meals, amount, paidAmt, due:amount-paidAmt};
+  });
+  document.getElementById('billResult').innerHTML = `<div class="card"><table><thead><tr><th>Student</th><th>Meals</th><th>Bill</th><th>Paid</th><th>Due</th><th></th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td>${esc(r.name)} <span class="status">#${esc(r.mess)}</span></td><td>${r.meals}</td><td>Rs${r.amount}</td><td>Rs${r.paidAmt}</td><td style="color:${r.due>0?'var(--bad)':'var(--ok)'}">${r.due>0?'Rs'+r.due:'Clear'}</td>
+    <td><button class="secondary" data-paymess="${esc(r.mess)}" style="padding:4px 8px;font-size:.72rem;">Add payment</button></td></tr>`).join('')}
+    <tr class="total-row"><td>Total</td><td>${rows.reduce((a,r)=>a+r.meals,0)}</td><td>Rs${rows.reduce((a,r)=>a+r.amount,0)}</td><td>Rs${rows.reduce((a,r)=>a+r.paidAmt,0)}</td><td>Rs${rows.reduce((a,r)=>a+r.due,0)}</td><td></td></tr>
+    </tbody></table></div>`;
+  document.querySelectorAll('[data-paymess]').forEach(b=>{
+    b.onclick = async ()=>{
+      const mess=b.dataset.paymess;
+      const amt=Number(prompt('Kitna payment mila (Rs)?'));
+      if(!amt) return;
+      const cur = (await db.collection('payments').doc(month).get());
+      const data = cur.exists ? cur.data() : {};
+      data[mess] = (data[mess]||0)+amt;
+      await db.collection('payments').doc(month).set(data);
+      generateBillUI();
+    };
+  });
+  st.textContent = `Showing ${month}.`;
+}
+
+// ---------------- MY BILL (student) ----------------
+async function renderMyBill(){
+  const pane=document.getElementById('pane-mybill');
+  const month=new Date().toISOString().slice(0,7);
+  pane.innerHTML = `<div class="card">Loading…</div>`;
+  const tally = await computeMonthlyTally(month);
+  const meals = tally[me.messNumber]||0;
+  const amount = meals*settings.rate;
+  const payDoc = await db.collection('payments').doc(month).get();
+  const paid = payDoc.exists ? (payDoc.data()[me.messNumber]||0) : 0;
+  const due = amount-paid;
+  pane.innerHTML = `<div class="card">
+    <p class="status">Is mahine (${month})</p>
+    <p>Meals liye: <strong>${meals}</strong></p>
+    <p>Rate: Rs${settings.rate}/meal</p>
+    <p>Total bill: <strong>Rs${amount}</strong></p>
+    <p>Paid: Rs${paid}</p>
+    <p style="font-size:1.1rem;font-weight:700;color:${due>0?'var(--bad)':'var(--ok)'}">${due>0?'Due: Rs'+due:'Sab clear ✓'}</p>
+  </div>`;
+}
+</script>
+</body>
+</html>
